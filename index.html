@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-100 dark:bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VnetSmart Network Monitor</title>
+    <!-- Use Tailwind CSS for a modern dashboard look -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url('https://images.unsplash.com/photo-1599818818029-7151e5927357?q=80&w=2670&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
+
+        /* Create a dark overlay for better text contrast */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* Adjust the opacity as needed */
+            backdrop-filter: blur(2px);
+            z-index: -1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Ensure dashboard content is above the overlay */
+        #dashboard-container, #auth-container {
+            position: relative;
+            z-index: 10;
+        }
+    </style>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 p-8 flex items-center justify-center min-h-screen">
+
+    <div id="auth-container" class="max-w-md w-full text-center">
+        <div class="bg-white dark:bg-gray-800/80 p-10 rounded-xl shadow-lg backdrop-blur-sm">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">VnetSmart Network Monitor</h1>
+            <p class="text-gray-600 dark:text-gray-300 mb-8">Please log in to view the dashboard.</p>
+            <div class="space-y-4">
+                <a href="/.auth/login/github" class="w-full flex items-center justify-center bg-gray-800 text-white font-semibold py-3 rounded-lg hover:bg-gray-700 transition-colors">
+                    <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.492.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" /></svg>
+                    Log in with GitHub
+                </a>
+                 <a href="/.auth/login/aad" class="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-500 transition-colors">
+                    <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.524 5.524h4.09v4.09h-4.09v-4.09zm0 8.862h4.09v4.09h-4.09v-4.09zm4.514-8.862h4.09v4.09h-4.09v-4.09zm0 8.862h4.09v4.09h-4.09v-4.09zm4.513-8.862h4.09v4.09h-4.09v-4.09zM2 2v20h20V2H2z" /></svg>
+                    Log in with Microsoft
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main container with a modern, rounded card feel -->
+    <div id="dashboard-container" class="hidden max-w-7xl w-full mx-auto rounded-xl shadow-lg bg-white dark:bg-gray-800/80 p-6 sm:p-10 transition-colors duration-300 backdrop-blur-sm">
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">VnetSmart Network Status</h1>
+            <div class="flex items-center space-x-4 mt-4 sm:mt-0">
+                <div class="text-right">
+                    <div id="user-info" class="text-sm font-medium text-gray-700 dark:text-gray-300"></div>
+                    <a href="/.auth/logout" class="text-sm text-blue-500 hover:underline">Logout</a>
+                </div>
+                <div class="flex items-center space-x-2">
+                     <span id="status-indicator" class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                     <span id="last-updated" class="text-sm text-gray-500 dark:text-gray-400">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard grid for key metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Card for Connected Clients -->
+            <div class="bg-blue-50/80 dark:bg-blue-900/40 p-6 rounded-lg shadow-sm border border-blue-200 dark:border-blue-800 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-blue-800 dark:text-blue-200">Connected Clients</h2>
+                <div class="flex items-center justify-between">
+                    <p id="client-count" class="text-4xl font-extrabold text-blue-600 dark:text-blue-400">...</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-12 h-12 text-blue-400 opacity-50">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Card for Devices Online -->
+            <div class="bg-green-50/80 dark:bg-green-900/40 p-6 rounded-lg shadow-sm border border-green-200 dark:border-green-800 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-green-800 dark:text-green-200">Devices Online</h2>
+                <div class="flex items-center justify-between">
+                    <p id="device-count" class="text-4xl font-extrabold text-green-600 dark:text-green-400">...</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-12 h-12 text-green-400 opacity-50">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m3.375-9.375a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0ZM18.75 14.25v2.25m-4.5-5.625v4.5m-3.75 0v4.5m-3.75 0v.75" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Card for Access Points -->
+            <div class="bg-orange-50/80 dark:bg-orange-900/40 p-6 rounded-lg shadow-sm border border-orange-200 dark:border-orange-800 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-orange-800 dark:text-orange-200">Access Points</h2>
+                <div class="flex items-center justify-between">
+                    <p id="ap-count" class="text-4xl font-extrabold text-orange-600 dark:text-orange-400">...</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-12 h-12 text-orange-400 opacity-50">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 9h15m-16.5 6.75h1.5m10.5-6.75H12m-3.75 0H7.5M4.5 20.25v-1.5M12 18.75v-1.5m3.75 1.5v-1.5M18.75 9h1.5m-1.5 6.75h1.5m-12-3h18m-9-6.75h6m-12 6.75h6m-1.5 0h-3" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Card for Real-time Traffic -->
+            <div class="bg-purple-50/80 dark:bg-purple-900/40 p-6 rounded-lg shadow-sm border border-purple-200 dark:border-purple-800 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-purple-800 dark:text-purple-200">Real-time Traffic</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">Download</span>
+                        <span id="download-speed" class="px-3 py-1 rounded-full font-semibold text-sm bg-purple-200 text-purple-800 dark:bg-purple-700 dark:text-purple-200">0 Mbps</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">Upload</span>
+                        <span id="upload-speed" class="px-3 py-1 rounded-full font-semibold text-sm bg-purple-200 text-purple-800 dark:bg-purple-700 dark:text-purple-200">0 Mbps</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card for Top 5 Devices Traffic -->
+            <div class="bg-yellow-50/80 dark:bg-yellow-900/40 p-6 rounded-lg shadow-sm border border-yellow-200 dark:border-yellow-800 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Top 5 Devices Traffic</h2>
+                <ul id="top-devices-list" class="space-y-3">
+                    <!-- Devices will be populated here by JavaScript -->
+                </ul>
+            </div>
+
+            <!-- Card for Block Incidents -->
+            <div class="bg-rose-50/80 dark:bg-rose-900/40 p-6 rounded-lg shadow-sm border border-rose-200 dark:border-rose-800 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-rose-800 dark:text-rose-200">Block Incidents</h2>
+                <ul id="incidents-list" class="space-y-3">
+                    <!-- Incidents will be populated here by JavaScript -->
+                </ul>
+            </div>
+            
+            <!-- Card for Overall Health -->
+            <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-gray-50/80 dark:bg-gray-800/40 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 mt-6 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Network Health</h2>
+                <div class="space-y-4">
+                    <div id="wan-card" class="bg-white/80 dark:bg-gray-700/80 p-4 rounded-lg shadow-inner flex items-center justify-between transition-colors duration-300">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">WAN Status</span>
+                        <span id="wan-status" class="px-3 py-1 rounded-full font-semibold text-sm bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200"></span>
+                    </div>
+                    <div id="uplink-card" class="bg-white/80 dark:bg-gray-700/80 p-4 rounded-lg shadow-inner flex items-center justify-between transition-colors duration-300">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">WAN Uplink Speed</span>
+                        <span id="uplink-speed-main" class="px-3 py-1 rounded-full font-semibold text-sm bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200"></span>
+                    </div>
+                    <div id="ap-health-card" class="bg-white/80 dark:bg-gray-700/80 p-4 rounded-lg shadow-inner flex items-center justify-between transition-colors duration-300">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">All APs Online</span>
+                        <span id="ap-health-status" class="px-3 py-1 rounded-full font-semibold text-sm bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New card for the traffic graph -->
+            <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-white/80 dark:bg-gray-800/80 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 mt-6 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Real-time Traffic History</h2>
+                <canvas id="traffic-chart"></canvas>
+            </div>
+
+            <!-- New card for the CPU utilization graph -->
+            <div class="col-span-1 md:col-span-2 bg-white/80 dark:bg-gray-800/80 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 mt-6 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">CPU Utilization</h2>
+                <canvas id="cpu-chart"></canvas>
+            </div>
+
+            <!-- New card for the device uptime graph -->
+            <div class="col-span-1 md:col-span-1 bg-white/80 dark:bg-gray-800/80 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 mt-6 backdrop-blur-sm">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Device Uptime</h2>
+                <canvas id="uptime-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-sm text-gray-400 mt-8">
+            <p>Data provided by VnetSmart. Dashboard powered by Azure.</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript to handle data fetching and UI updates -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const authContainer = document.getElementById('auth-container');
+            const dashboardContainer = document.getElementById('dashboard-container');
+            const userInfo = document.getElementById('user-info');
+
+            const statusIndicator = document.getElementById('status-indicator');
+            const lastUpdatedSpan = document.getElementById('last-updated');
+            const clientCountP = document.getElementById('client-count');
+            const deviceCountP = document.getElementById('device-count');
+            const apCountP = document.getElementById('ap-count');
+            const wanStatusSpan = document.getElementById('wan-status');
+            const uplinkSpeedMainSpan = document.getElementById('uplink-speed-main');
+            const apHealthStatusSpan = document.getElementById('ap-health-status');
+            const wanCard = document.getElementById('wan-card');
+            const uplinkCard = document.getElementById('uplink-card');
+            const apHealthCard = document.getElementById('ap-health-card');
+            const downloadSpeedSpan = document.getElementById('download-speed');
+            const uploadSpeedSpan = document.getElementById('upload-speed');
+            const topDevicesList = document.getElementById('top-devices-list');
+            const incidentsList = document.getElementById('incidents-list');
+            let trafficChart, cpuChart, uptimeChart;
+
+            async function checkAuthStatus() {
+                try {
+                    const res = await fetch('/.auth/me');
+                    const data = await res.json();
+                    const { clientPrincipal } = data;
+
+                    if (clientPrincipal) {
+                        userInfo.textContent = `Welcome, ${clientPrincipal.userDetails}`;
+                        authContainer.classList.add('hidden');
+                        dashboardContainer.classList.remove('hidden');
+                        initializeDashboard();
+                    } else {
+                        authContainer.classList.remove('hidden');
+                        dashboardContainer.classList.add('hidden');
+                    }
+                } catch (error) {
+                    authContainer.classList.remove('hidden');
+                    dashboardContainer.classList.add('hidden');
+                }
+            }
+
+            function initializeDashboard() {
+                 // Initialize the traffic chart
+                const trafficCtx = document.getElementById('traffic-chart').getContext('2d');
+                trafficChart = new Chart(trafficCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Download Speed (Mbps)',
+                            data: [],
+                            borderColor: 'rgb(109, 40, 217)',
+                            backgroundColor: 'rgba(109, 40, 217, 0.2)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 0
+                        }, {
+                            label: 'Upload Speed (Mbps)',
+                            data: [],
+                            borderColor: 'rgb(255, 159, 64)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' }
+                            }
+                        },
+                        plugins: { legend: { labels: { color: '#aaa' } } }
+                    }
+                });
+                
+                // Initialize the CPU chart
+                const cpuCtx = document.getElementById('cpu-chart').getContext('2d');
+                cpuChart = new Chart(cpuCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'CPU Utilization (%)',
+                            data: [],
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' }
+                            }
+                        },
+                        plugins: { legend: { labels: { color: '#aaa' } } }
+                    }
+                });
+
+                fetchData();
+                setInterval(fetchData, 300000); // 5 minutes
+                setInterval(updateRealtimeGraphs, 1000); // 1 second
+            }
+            
+            function createUptimeChart(data) {
+                const uptimeCtx = document.getElementById('uptime-chart').getContext('2d');
+                if (uptimeChart) uptimeChart.destroy();
+                uptimeChart = new Chart(uptimeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.name),
+                        datasets: [{
+                            label: 'Uptime (Days)',
+                            data: data.map(d => d.uptimeDays),
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgb(75, 192, 192)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' }
+                            }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            function updateDashboardUI(data) {
+                if (!data) return;
+                const now = new Date();
+                lastUpdatedSpan.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+                
+                clientCountP.textContent = data.clientCount;
+                deviceCountP.textContent = data.deviceCount;
+                apCountP.textContent = data.apCount;
+
+                const wanStatus = data.wanStatus.toLowerCase();
+                wanStatusSpan.textContent = wanStatus.toUpperCase();
+                wanCard.className = `bg-white/80 dark:bg-gray-700/80 p-4 rounded-lg shadow-inner flex items-center justify-between transition-colors duration-300 ${wanStatus === 'online' ? 'bg-green-50/80 dark:bg-green-900/40' : 'bg-red-50/80 dark:bg-red-900/40'}`;
+                wanStatusSpan.className = `px-3 py-1 rounded-full font-semibold text-sm ${wanStatus === 'online' ? 'bg-green-200 text-green-800 dark:bg-green-700 dark:text-green-200' : 'bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-200'}`;
+
+                uplinkSpeedMainSpan.textContent = data.uplinkSpeed;
+                
+                const apHealth = data.apHealth;
+                apHealthStatusSpan.textContent = apHealth ? 'Yes' : 'No';
+                apHealthCard.className = `bg-white/80 dark:bg-gray-700/80 p-4 rounded-lg shadow-inner flex items-center justify-between transition-colors duration-300 ${apHealth ? 'bg-green-50/80 dark:bg-green-900/40' : 'bg-red-50/80 dark:bg-red-900/40'}`;
+                apHealthStatusSpan.className = `px-3 py-1 rounded-full font-semibold text-sm ${apHealth ? 'bg-green-200 text-green-800 dark:bg-green-700 dark:text-green-200' : 'bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-200'}`;
+                
+                updateTopDevices(data.topDevices);
+                updateBlockIncidents(data.blockIncidents);
+                createUptimeChart(data.deviceUptime);
+
+                statusIndicator.classList.remove('bg-red-500', 'animate-pulse');
+                statusIndicator.classList.add('bg-green-500');
+            }
+            
+            function updateTopDevices(devices) {
+                topDevicesList.innerHTML = '';
+                devices.forEach(device => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center justify-between text-sm bg-white/80 dark:bg-gray-700/80 p-3 rounded-lg shadow-inner';
+                    li.innerHTML = `<div class="flex flex-col"><span class="font-medium text-gray-700 dark:text-gray-300">${device.name}</span><span class="text-xs text-gray-500 dark:text-gray-400">${device.ip}</span></div><span class="font-semibold text-gray-700 dark:text-gray-300">${device.traffic} GB</span>`;
+                    topDevicesList.appendChild(li);
+});
+            }
+
+            function updateBlockIncidents(incidents) {
+                incidentsList.innerHTML = '';
+                incidents.forEach(incident => {
+                    const li = document.createElement('li');
+                    li.className = 'flex flex-col text-sm bg-white/80 dark:bg-gray-700/80 p-3 rounded-lg shadow-inner';
+                    li.innerHTML = `<span class="font-medium text-gray-700 dark:text-gray-300">${incident.reason}</span><span class="text-xs text-gray-500 dark:text-gray-400">Device: ${incident.device} | ${incident.timestamp}</span>`;
+                    incidentsList.appendChild(li);
+                });
+            }
+
+            async function fetchData() {
+                try {
+                    // Update this line to call your Azure Function's endpoint
+                    const response = await fetch('/api/unifi_api_function');
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("API Error:", response.status, errorText);
+                        throw new Error(`API returned an error: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    updateDashboardUI(data);
+                } catch (error) {
+                    console.error("Could not fetch data from API.", error);
+                    statusIndicator.classList.remove('bg-green-500');
+                    statusIndicator.classList.add('bg-red-500', 'animate-pulse');
+                    lastUpdatedSpan.textContent = `Last updated: Error`;
+                    // You might want to display a user-friendly error message on the dashboard here.
+                }
+            }
+
+            function updateRealtimeGraphs() {
+                if (!trafficChart || !cpuChart) return;
+                const downloadSpeed = (Math.random() * 100).toFixed(2);
+                const uploadSpeed = (Math.random() * 20).toFixed(2);
+                const cpuUsage = (Math.random() * 50).toFixed(2);
+                
+                downloadSpeedSpan.textContent = `${downloadSpeed} Mbps`;
+                uploadSpeedSpan.textContent = `${uploadSpeed} Mbps`;
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString();
+
+                trafficChart.data.labels.push(timeLabel);
+                trafficChart.data.datasets[0].data.push(downloadSpeed);
+                trafficChart.data.datasets[1].data.push(uploadSpeed);
+                
+                cpuChart.data.labels.push(timeLabel);
+                cpuChart.data.datasets[0].data.push(cpuUsage);
+
+                const maxDataPoints = 20;
+                if (trafficChart.data.labels.length > maxDataPoints) {
+                    trafficChart.data.labels.shift();
+                    trafficChart.data.datasets[0].data.shift();
+                    trafficChart.data.datasets[1].data.shift();
+                    cpuChart.data.labels.shift();
+                    cpuChart.data.datasets[0].data.shift();
+                }
+                
+                trafficChart.update();
+                cpuChart.update();
+            }
+
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>
